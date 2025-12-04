@@ -18,10 +18,57 @@ main :: proc() {
 	input: string = #load("./input.txt")
 	defer delete(input)
 
-	banks := strings.split_lines(input)
+	max_batteries := 2
+	banks := parse_input(&input)
+	defer {
+		for bank in banks do delete(bank)
+		delete(banks)
+	}
+
+	result := find_consecutive_largest_jolts(banks, 2)
+	defer {
+		for digits in result do delete(digits)
+		delete(result)
+	}
+	acc := 0
+	for digits in result {
+		acc += combine_digits_into_int(digits[:])
+	}
+
+	log.info(len(result), result)
+
+	log.info("Sum:", acc)
 }
 
+find_consecutive_largest_jolts :: proc (banks: [dynamic][dynamic]int, max_batteries: int) -> [dynamic][dynamic]int {
+	result := make([dynamic][dynamic]int)
 
+	for bank, bank_pos in banks {
+
+		digits := make([dynamic]int)
+
+		min_possible_pos := 0
+		batteries_loop: for curr_battery in 1..=max_batteries {
+
+			max_possible_pos := len(bank) - (max_batteries - curr_battery)
+			for digit := 9; digit > 0; digit -= 1 {
+
+				for joltage, index in bank[min_possible_pos:max_possible_pos] {
+					if joltage == digit {
+						inject_at(&digits, curr_battery - 1, joltage)
+						min_possible_pos = index + 1
+
+						continue batteries_loop
+					}
+				}
+			}
+		}
+
+		inject_at(&result, bank_pos, digits)
+	}
+
+	return result
+}
 
 parse_input :: proc(input: ^string) -> [dynamic][dynamic]int {
 	banks := make([dynamic][dynamic]int)
@@ -94,46 +141,15 @@ sample_test :: proc(t: ^testing.T) {
 		delete(banks)
 	}
 
-	result: sa.Small_Array(1000, [2]int)
-
-	for bank, bank_pos in banks {
-		log.info("BANK #", bank_pos, bank)
-
-		sa.inject_at(&result, [2]int{}, bank_pos)
-
-		min_possible_pos := 0
-		batteries_loop: for curr_battery in 1..=max_batteries {
-			log.info("Finding battery #", curr_battery, "out of", max_batteries)
-
-			max_possible_pos := len(bank) - (max_batteries - curr_battery)
-
-			for digit := 9; digit > 0; digit -= 1 {
-				log.info("> finding digit", digit, "in", bank[min_possible_pos:max_possible_pos])
-
-				#reverse for joltage, index in bank[min_possible_pos:max_possible_pos] {
-					if joltage == digit {
-						log.info("> found match at pos", index)
-						ints := sa.get(result, bank_pos)
-						ints[curr_battery - 1] = joltage
-						sa.inject_at(&result, ints, bank_pos)
-						min_possible_pos = index + 1
-
-						continue batteries_loop
-					}
-				}
-			}
-		}
-
-		log.info("> Max possible value for", bank, "is", sa.get(result, bank_pos))
+	result := find_consecutive_largest_jolts(banks, 2)
+	defer {
+		for digits in result do delete(digits)
+		delete(result)
 	}
-
 	acc := 0
-	for i := 0; i < len(banks); i += 1 {
-		digits := sa.get(result, i)
+	for digits in result {
 		acc += combine_digits_into_int(digits[:])
 	}
-
-
 
 	testing.expect_value(t, acc, 357)
 }
