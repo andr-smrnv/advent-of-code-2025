@@ -25,7 +25,7 @@ main :: proc() {
 		delete(banks)
 	}
 
-	result := find_consecutive_largest_jolts(banks, 2)
+	result := find_consecutive_largest_jolts(banks, 12)
 	defer {
 		for digits in result do delete(digits)
 		delete(result)
@@ -56,7 +56,7 @@ find_consecutive_largest_jolts :: proc (banks: [dynamic][dynamic]int, max_batter
 				for joltage, index in bank[min_possible_pos:max_possible_pos] {
 					if joltage == digit {
 						inject_at(&digits, curr_battery - 1, joltage)
-						min_possible_pos = index + 1
+						min_possible_pos = min_possible_pos + index + 1
 
 						continue batteries_loop
 					}
@@ -154,4 +154,28 @@ sample_test :: proc(t: ^testing.T) {
 	testing.expect_value(t, acc, 357)
 }
 
+@(test)
+sample_test_part2 :: proc(t: ^testing.T) {
+	input: string = #load("./sample.txt")
+
+	max_batteries := 12
+	banks := parse_input(&input)
+	defer {
+		for bank in banks do delete(bank)
+		delete(banks)
+	}
+
+	result := find_consecutive_largest_jolts(banks, 12)
+	log.info(result)
+	defer {
+		for digits in result do delete(digits)
+		delete(result)
+	}
+	acc := 0
+	for digits in result {
+		acc += combine_digits_into_int(digits[:])
+	}
+
+	testing.expect_value(t, acc, 3121910778619)
+}
 
